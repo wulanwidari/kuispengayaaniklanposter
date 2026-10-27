@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kuis Interaktif: Iklan & Poster</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Background gradient meniru warna biru laut dalam dari referensi */
+            background: linear-gradient(135deg, #112754 0%, #1e457c 50%, #255490 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none; /* Mencegah teks terblok tidak sengaja di layar sentuh */
+        }
+
+        /* Styling untuk kartu menu (Glassmorphism + Border) */
+        .menu-card {
+            background: rgba(30, 60, 110, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s;
+            cursor: pointer;
+        }
+
+        .menu-card:hover, .menu-card:active {
+            transform: scale(1.02);
+            background: rgba(40, 80, 140, 0.5);
+            box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        /* Styling untuk bola angka 3D */
+        .number-sphere {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.25rem;
+            color: #111;
+            box-shadow: 4px 6px 10px rgba(0, 0, 0, 0.4), inset -5px -5px 15px rgba(0,0,0,0.3), inset 5px 5px 15px rgba(255,255,255,0.6);
+            flex-shrink: 0;
+        }
+
+        /* Warna bola meniru referensi gambar */
+        .sphere-1 { background: radial-gradient(circle at 30% 30%, #ffe066, #ffb000); }
+        .sphere-2 { background: radial-gradient(circle at 30% 30%, #66d9ff, #0099cc); }
+        .sphere-3 { background: radial-gradient(circle at 30% 30%, #cc99ff, #7326c0); color: white;}
+        .sphere-4 { background: radial-gradient(circle at 30% 30%, #66ff99, #00b33c); }
+
+        /* Styling Opsi Jawaban Kuis */
+        .option-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+        }
+        
+        .option-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .option-correct {
+            background: rgba(34, 197, 94, 0.8) !important; /* Green */
+            border-color: #4ade80 !important;
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(34, 197, 94, 0.5);
+        }
+
+        .option-wrong {
+            background: rgba(239, 68, 68, 0.8) !important; /* Red */
+            border-color: #f87171 !important;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            50% { transform: translateX(10px); }
+            75% { transform: translateX(-10px); }
+        }
+
+        .fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Efek partikel sederhana (Background hiasan garis) */
+        .bg-lines {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 100px 100px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* Styling untuk Input Form */
+        .input-field {
+            background: rgba(0, 0, 0, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            transition: all 0.3s ease;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #60a5fa;
+            background: rgba(0, 0, 0, 0.4);
+            box-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
+        }
+        .input-field::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body class="relative flex items-center justify-center">
+    
+    <div class="bg-lines"></div>
+
+    <!-- IDENTITY SCREEN (Form Nama & Kelas) -->
+    <div id="screen-identity" class="relative z-10 w-full max-w-2xl p-8 fade-in">
+        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-10 md:p-14 shadow-2xl text-center">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg text-white">Selamat Datang!</h1>
+            <p class="text-xl text-blue-200 mb-10">Silakan isi nama dan kelasmu sebelum mulai kuis interaktif.</p>
+            
+            <div class="space-y-6 text-left">
+                <div>
+                    <label class="block text-2xl font-semibold mb-3 ml-2">Nama Lengkap</label>
+                    <input type="text" id="input-name" class="input-field w-full rounded-2xl p-5 text-2xl" placeholder="Ketik namamu di sini..." autocomplete="off">
+                </div>
+                <div>
+                    <label class="block text-2xl font-semibold mb-3 ml-2">Kelas</label>
+                    <input type="text" id="input-class" class="input-field w-full rounded-2xl p-5 text-2xl" placeholder="Contoh: 8A, 9B..." autocomplete="off">
+                </div>
+            </div>
+            
+            <button onclick="saveIdentity()" class="mt-12 w-full bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 border border-blue-400 text-white text-2xl font-bold py-5 px-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95">
+                Mulai Belajar
+            </button>
+            <p id="error-msg" class="text-red-400 mt-6 text-xl hidden font-semibold animate-pulse">Harap isi nama dan kelas terlebih dahulu!</p>
+        </div>
+    </div>
+
+    <!-- MAIN MENU SCREEN -->
+    <div id="screen-menu" class="hidden relative z-10 w-full max-w-6xl p-8 fade-in">
+        <div class="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
+            <div class="text-center md:text-left">
+                <h1 class="text-4xl md:text-5xl font-bold mb-4 drop-shadow-lg">Eksplorasi Iklan & Poster</h1>
+                <p class="text-xl text-blue-200">Pilih materi kuis untuk memulai pembelajaran interaktif</p>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4 min-w-[200px] text-center md:text-right shadow-lg">
+                <p class="text-sm text-blue-200 uppercase tracking-wider mb-1">Siswa Aktif</p>
+                <p id="display-student-info" class="text-xl md:text-2xl font-bold text-white">Nama - Kelas</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+            <!-- Card 1 -->
+            <div id="card-1" onclick="startQuiz(1)" class="menu-card relative rounded-2xl p-6 md:p-8 flex items-center gap-6 min-h-[140px]">
+                <div class="number-sphere sphere-1 text-black">01</div>
+                <h2 class="text-2xl md:text-3xl font-bold leading-tight drop-shadow-md">Mengenali ciri iklan dan poster</h2>
+            </div>
+            
+            <!-- Card 2 -->
+            <div id="card-2" onclick="startQuiz(2)" class="menu-card relative rounded-2xl p-6 md:p-8 flex items-center gap-6 min-h-[140px]">
+                <div class="number-sphere sphere-2 text-black">02</div>
+                <h2 class="text-2xl md:text-3xl font-bold leading-tight drop-shadow-md">Menjelaskan tujuan penggunaan iklan dan poster</h2>
+            </div>
+
+            <!-- Card 3 -->
+            <div id="card-3" onclick="startQuiz(3)" class="menu-card relative rounded-2xl p-6 md:p-8 flex items-center gap-6 min-h-[140px]">
+                <div class="number-sphere sphere-3">03</div>
+                <h2 class="text-2xl md:text-3xl font-bold leading-tight drop-shadow-md">Menemukan unsur verbal dan visual</h2>
+            </div>
+
+            <!-- Card 4 -->
+            <div id="card-4" onclick="startQuiz(4)" class="menu-card relative rounded-2xl p-6 md:p-8 flex items-center gap-6 min-h-[140px]">
+                <div class="number-sphere sphere-4 text-black">04</div>
+                <h2 class="text-2xl md:text-3xl font-bold leading-tight drop-shadow-md">Menafsirkan pesan yang terkandung di dalam iklan dan poster</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- QUIZ SCREEN -->
+    <div id="screen-quiz" class="hidden relative z-10 w-full max-w-5xl p-6 fade-in">
+        <!-- Header Kuis -->
+        <div class="flex justify-between items-center mb-8 bg-black/20 p-4 rounded-xl backdrop-blur-sm border border-white/10">
+            <button onclick="goHome()" class="flex items-center gap-2 text-white hover:text-blue-300 transition px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-xl font-semibold">
+                <span>&#8592;</span> Kembali
+            </button>
+            <div class="text-2xl font-bold flex items-center gap-3">
+                <div id="quiz-category-badge" class="number-sphere sphere-1 !w-12 !h-12 text-lg">01</div>
+                <span id="quiz-category-title" class="hidden sm:inline">Kategori</span>
+            </div>
+            <div class="text-xl font-semibold bg-white/10 px-4 py-2 rounded-lg">
+                Soal <span id="q-current">1</span>/<span id="q-total">5</span>
+            </div>
+        </div>
+
+        <!-- Area Pertanyaan -->
+        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-8 mb-6 shadow-2xl">
+            <h3 id="question-text" class="text-3xl md:text-4xl font-bold mb-10 leading-tight text-center drop-shadow-lg">
+                Pertanyaan akan muncul di sini?
+            </h3>
+
+            <!-- Opsi Jawaban -->
+            <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <!-- Opsi dirender via JS -->
+            </div>
+        </div>
+        
+        <!-- Feedback Box -->
+        <div id="feedback-box" class="hidden text-center p-4 rounded-xl text-2xl font-bold transition-all">
+            Jawaban Benar!
+        </div>
+    </div>
+
+    <!-- RESULT SCREEN -->
+    <div id="screen-result" class="hidden relative z-10 w-full max-w-3xl p-8 fade-in text-center">
+        <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-12 shadow-2xl">
+            <div id="result-icon" class="text-8xl mb-6">🏆</div>
+            <h2 class="text-4xl md:text-5xl font-bold mb-4 drop-shadow-md">Kuis Selesai!</h2>
+            <p class="text-2xl text-blue-200 mb-6">Hebat, <span id="result-name" class="font-bold text-white">Nama</span> dari <span id="result-class" class="font-bold text-white">Kelas</span>!</p>
+            <p class="text-xl text-white mb-2">Skor Akhir Anda:</p>
+            <div class="text-7xl md:text-9xl font-extrabold text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.5)] mb-10">
+                <span id="final-score">100</span>
+            </div>
+            
+            <!-- Pesan Untuk Guru -->
+            <div class="bg-blue-900/40 border border-blue-400/30 rounded-2xl p-6 mb-10 shadow-inner">
+                <p class="text-xl md:text-2xl font-medium text-blue-100 italic leading-relaxed">
+                    "Tunjukkan layar ini kepada Gurumu sebagai bukti belajarmu hari ini. <br/>Terima kasih sudah belajar dengan semangat!" 🌟
+                </p>
+            </div>
+
+            <button onclick="location.reload()" class="w-full md:w-auto bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 border border-blue-400 text-white text-2xl font-bold py-4 px-12 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95">
+                Mulai Ulang Permainan
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Data Kuis (Disesuaikan dengan 4 tujuan dari gambar)
+        const quizData = {
+            1: {
+                title: "Mengenali ciri iklan dan poster",
+                badgeClass: "sphere-1",
+                badgeColor: "text-black",
+                questions: [
+                    {
+                        q: "Manakah yang merupakan ciri UTAMA dari sebuah poster yang baik?",
+                        options: ["Hanya berisi teks yang sangat panjang dan detail", "Mengutamakan kekuatan gambar dan kata-kata yang singkat", "Disiarkan melalui media elektronik seperti radio", "Dicetak menjadi buku berhalaman tebal"],
+                        answer: 1
+                    },
+                    {
+                        q: "Bahasa yang digunakan dalam pembuatan iklan komersial biasanya bersifat...",
+                        options: ["Persuasif (Mengajak)", "Naratif (Bercerita panjang)", "Deskriptif (Menjelaskan detail teknis)", "Argumentatif (Berdebat)"],
+                        answer: 0
+                    },
+                    {
+                        q: "Salah satu ciri khas tata letak (layout) poster adalah...",
+                        options: ["Menggunakan huruf berukuran kecil semua", "Warna latar belakang selalu putih", "Gambar dan teks menonjol serta mudah terlihat dari jauh", "Teks ditulis dalam bentuk paragraf panjang"],
+                        answer: 2
+                    }
+                ]
+            },
+            2: {
+                title: "Menjelaskan tujuan penggunaan iklan",
+                badgeClass: "sphere-2",
+                badgeColor: "text-black",
+                questions: [
+                    {
+                        q: "Apa tujuan UTAMA dari pembuatan iklan komersial (niaga)?",
+                        options: ["Memberikan informasi berita harian", "Menawarkan dan mempromosikan barang atau jasa", "Meminta sumbangan kepada masyarakat", "Mengkritik kebijakan pemerintah"],
+                        answer: 1
+                    },
+                    {
+                        q: "Sebuah instansi pemerintah membuat iklan tentang bahaya narkoba. Iklan ini bertujuan untuk...",
+                        options: ["Mencari keuntungan finansial (uang)", "Menjual obat-obatan", "Memberikan layanan masyarakat / edukasi", "Menghibur masyarakat yang sedang bosan"],
+                        answer: 2
+                    },
+                    {
+                        q: "Tujuan utama poster dipasang di tempat-tempat umum yang strategis adalah...",
+                        options: ["Agar mudah dirusak orang", "Agar dibaca dan menarik perhatian banyak orang", "Hanya sebagai hiasan dinding jalanan", "Agar penjual poster mendapat untung"],
+                        answer: 1
+                    }
+                ]
+            },
+            3: {
+                title: "Menemukan unsur verbal dan visual",
+                badgeClass: "sphere-3",
+                badgeColor: "text-white",
+                questions: [
+                    {
+                        q: "Kalimat slogan 'Orang Bijak Taat Pajak' di dalam sebuah iklan cetak merupakan contoh dari unsur...",
+                        options: ["Visual (Gambar)", "Audio (Suara)", "Verbal (Kata/Teks)", "Audio-Visual (Video)"],
+                        answer: 2
+                    },
+                    {
+                        q: "Gambar ilustrasi sabun mandi yang mencolok dan berwarna cerah pada sebuah poster promosi termasuk ke dalam unsur...",
+                        options: ["Visual", "Verbal", "Intonasi", "Gestur"],
+                        answer: 0
+                    },
+                    {
+                        q: "Kombinasi antara tipografi (jenis huruf yang menarik) dan ilustrasi tokoh kartun pada poster anak-anak menunjukkan penggunaan unsur...",
+                        options: ["Hanya unsur verbal", "Hanya unsur visual", "Unsur verbal dan visual", "Unsur tak terlihat"],
+                        answer: 2
+                    }
+                ]
+            },
+            4: {
+                title: "Menafsirkan pesan dalam iklan/poster",
+                badgeClass: "sphere-4",
+                badgeColor: "text-black",
+                questions: [
+                    {
+                        q: "Sebuah poster menampilkan gambar bumi yang memerah dan berkeringat, dengan tulisan 'Satu Pohon, Beribu Kehidupan'. Pesan yang ingin disampaikan adalah...",
+                        options: ["Ajakan untuk menjual pohon ke luar negeri", "Ajakan menanam pohon untuk mengatasi pemanasan global", "Informasi bahwa cuaca besok akan sangat panas", "Promosi penjualan kayu bakar"],
+                        answer: 1
+                    },
+                    {
+                        q: "Iklan menampilkan seorang atlet terkenal sedang meminum minuman X, lalu ia memenangkan pertandingan. Pesan tersiratnya adalah...",
+                        options: ["Atlet tersebut dibayar murah", "Minuman X menyebabkan kekalahan", "Minuman X memberikan energi untuk meraih kemenangan", "Hanya atlet yang boleh meminum minuman X"],
+                        answer: 2
+                    },
+                    {
+                        q: "Poster di sekolah berbunyi: 'Buku adalah Jendela Dunia'. Makna pesan dari poster tersebut adalah...",
+                        options: ["Buku bisa digunakan untuk menutupi jendela", "Dengan membaca buku, kita mendapat banyak ilmu dan wawasan", "Buku harganya sangat mahal seperti jendela", "Dilarang membuang buku dari jendela"],
+                        answer: 1
+                    }
+                ]
+            }
+        };
+
+        // State Aplikasi
+        let studentName = "";
+        let studentClass = "";
+        let currentCategory = 1;
+        let currentQuestionIndex = 0;
+        let totalCorrectAnswers = 0;
+        let completedCategories = [];
+        const totalQuestions = 12; // Total soal keseluruhan (4 kategori x 3 soal)
+        let isAnswering = false;
+
+        // Elemen DOM
+        const screenIdentity = document.getElementById('screen-identity');
+        const screenMenu = document.getElementById('screen-menu');
+        const screenQuiz = document.getElementById('screen-quiz');
+        const screenResult = document.getElementById('screen-result');
+        
+        // Fungsi Navigasi & Alur
+        function saveIdentity() {
+            const nameInput = document.getElementById('input-name').value.trim();
+            const classInput = document.getElementById('input-class').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+
+            if (nameInput === "" || classInput === "") {
+                errorMsg.classList.remove('hidden');
+                return;
+            }
+
+            errorMsg.classList.add('hidden');
+            studentName = nameInput;
+            studentClass = classInput;
+            
+            // Tampilkan info siswa di menu dan di layar hasil
+            document.getElementById('display-student-info').innerText = `${studentName} - ${studentClass}`;
+            document.getElementById('result-name').innerText = studentName;
+            document.getElementById('result-class').innerText = studentClass;
+
+            // Pindah ke menu
+            screenIdentity.classList.add('hidden');
+            screenMenu.classList.remove('hidden');
+        }
+
+        function startQuiz(categoryId) {
+            // Cegah masuk kembali ke misi yang sudah diselesaikan
+            if (completedCategories.includes(categoryId)) return;
+
+            currentCategory = categoryId;
+            currentQuestionIndex = 0;
+            
+            // Setup UI Header Kuis
+            const catData = quizData[currentCategory];
+            const badge = document.getElementById('quiz-category-badge');
+            badge.className = `number-sphere ${catData.badgeClass} ${catData.badgeColor} !w-12 !h-12 text-lg`;
+            badge.innerText = "0" + categoryId;
+            document.getElementById('quiz-category-title').innerText = catData.title;
+            document.getElementById('q-total').innerText = catData.questions.length;
+
+            // Transisi Layar
+            screenMenu.classList.add('hidden');
+            screenQuiz.classList.remove('hidden');
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isAnswering = false;
+            const qData = quizData[currentCategory].questions[currentQuestionIndex];
+            
+            // Update Nomor Soal
+            document.getElementById('q-current').innerText = currentQuestionIndex + 1;
+            
+            // Update Teks Pertanyaan
+            document.getElementById('question-text').innerText = qData.q;
+            
+            // Render Opsi
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = ''; // Kosongkan opsi sebelumnya
+            
+            // Feedback box sembunyikan
+            document.getElementById('feedback-box').classList.add('hidden');
+
+            qData.options.forEach((opt, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn w-full text-left p-6 rounded-2xl text-xl md:text-2xl font-semibold shadow-lg text-white/90 hover:text-white';
+                // Menambahkan label A, B, C, D
+                const letter = String.fromCharCode(65 + index);
+                btn.innerHTML = `<span class="inline-block bg-white/20 rounded-lg w-10 h-10 text-center leading-10 mr-4">${letter}</span> ${opt}`;
+                btn.onclick = () => selectAnswer(index, btn);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        function selectAnswer(selectedIndex, buttonElement) {
+            if (isAnswering) return; // Cegah klik dobel
+            isAnswering = true;
+
+            const qData = quizData[currentCategory].questions[currentQuestionIndex];
+            const isCorrect = selectedIndex === qData.answer;
+            const feedbackBox = document.getElementById('feedback-box');
+
+            // Hapus event listener dari semua tombol
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(btn => btn.onclick = null);
+
+            if (isCorrect) {
+                buttonElement.classList.add('option-correct');
+                totalCorrectAnswers++; // Tambah akumulasi total jawaban benar
+                
+                feedbackBox.innerText = "Jawaban Tepat! 🎉";
+                feedbackBox.className = "mt-6 text-center p-4 rounded-xl text-2xl font-bold bg-green-500/80 text-white border border-green-400 fade-in";
+            } else {
+                buttonElement.classList.add('option-wrong');
+                // Tunjukkan jawaban yang benar
+                allBtns[qData.answer].classList.add('option-correct');
+                
+                feedbackBox.innerText = "Kurang Tepat! 😔";
+                feedbackBox.className = "mt-6 text-center p-4 rounded-xl text-2xl font-bold bg-red-500/80 text-white border border-red-400 fade-in";
+            }
+            
+            feedbackBox.classList.remove('hidden');
+
+            // Lanjut ke soal berikutnya setelah delay
+            setTimeout(() => {
+                currentQuestionIndex++;
+                if (currentQuestionIndex < quizData[currentCategory].questions.length) {
+                    loadQuestion();
+                } else {
+                    finishCategory(); // Panggil fungsi menyelesaikan kategori, bukan showResult()
+                }
+            }, 2500); // 2.5 detik agar pengguna bisa membaca jawaban yang benar
+        }
+
+        // Fungsi baru untuk menangani kategori yang sudah diselesaikan
+        function finishCategory() {
+            completedCategories.push(currentCategory);
+            
+            // Berikan tanda centang dan matikan kartu menu
+            const card = document.getElementById('card-' + currentCategory);
+            if (card) {
+                card.classList.add('opacity-60', 'cursor-default');
+                card.classList.remove('menu-card', 'hover:scale-105', 'active:scale-95');
+                card.onclick = null; // Matikan klik
+                
+                // Tambahkan elemen centang
+                const check = document.createElement('div');
+                check.className = "absolute top-4 right-4 bg-green-500 text-white rounded-full w-12 h-12 flex items-center justify-center text-3xl font-bold shadow-lg z-20";
+                check.innerHTML = "&#10003;"; // Karakter Centang
+                card.appendChild(check);
+            }
+
+            // Jika semua 4 kategori sudah selesai, tunjukkan hasil akhir
+            if (completedCategories.length === 4) {
+                showResult();
+            } else {
+                goHome(); // Kembali ke menu utama untuk memilih misi lain
+            }
+        }
+
+        function showResult() {
+            screenQuiz.classList.add('hidden');
+            screenResult.classList.remove('hidden');
+            
+            // Hitung akumulasi skor akhir (Skor Maksimal 100)
+            const finalScore = Math.round((totalCorrectAnswers / totalQuestions) * 100);
+            document.getElementById('final-score').innerText = finalScore;
+            
+            const icon = document.getElementById('result-icon');
+            if (finalScore === 100) {
+                icon.innerText = "🌟";
+            } else if (finalScore >= 60) {
+                icon.innerText = "👍";
+            } else {
+                icon.innerText = "💪";
+            }
+        }
+
+        function goHome() {
+            screenQuiz.classList.add('hidden');
+            screenResult.classList.add('hidden');
+            screenMenu.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
